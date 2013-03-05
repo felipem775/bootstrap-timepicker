@@ -1,4 +1,7 @@
 /*!
+ * Modified by FelipeM (http://felipem.com)
+ * Date: 2013 03 05 
+ *
  * Timepicker Component for Twitter Bootstrap
  *
  * Copyright 2013 Joris de Wit
@@ -27,7 +30,9 @@
     this.showSeconds = options.showSeconds;
     this.template = options.template;
     this.appendWidgetTo = options.appendWidgetTo;
-
+	this.minValue = {hour: options.minValue.hour, minute: (options.minValue.minute === undefined ? 0 : options.minValue.minute), second: (options.minValue.second === undefined ? 0 : options.minValue.second), format: options.minValue.format};
+	this.maxValue = {hour: options.maxValue.hour, minute: (options.maxValue.minute === undefined ? 59 : options.maxValue.minute), second: (options.maxValue.second === undefined ? 59 : options.maxValue.second), format: options.maxValue.format};;
+	
     this._init();
   };
 
@@ -270,6 +275,10 @@
         meridianTemplate = '<span class="bootstrap-timepicker-meridian"></span>';
       }
 
+	  
+	  var minValueText = 'Min. value: '+ this.minValue.hour + ':' + this.minValue.minute + ':' + (!this.minValue.second === undefined ? this.minValue.second : '00') + ", " + this.minValue.format;
+	  var maxValueText = 'Max. value: '+ this.maxValue.hour + ':' + this.maxValue.minute + ':' + (!this.maxValue.second === undefined ? this.maxValue.second : '59')+ ", " + this.maxValue.format;
+	  
       templateContent = '<table>'+
          '<tr>'+
            '<td><a href="#" data-action="incrementHour"><i class="icon-chevron-up"></i></a></td>'+
@@ -309,6 +318,7 @@
             '<td class="separator">&nbsp;</td>'+
             '<td><a href="#" data-action="toggleMeridian"><i class="icon-chevron-down"></i></a></td>'
            : '') +
+		   '<tr id="timePickerMessageTr" style="display:none;"><td colspan=7><span class="text-error">ERROR<br />' + minValueText + '<br />' + maxValueText+ ' </span></td></tr>' +
          '</tr>'+
        '</table>';
 
@@ -744,6 +754,8 @@
         if (this.showMeridian) {
           this.$widget.find('input.bootstrap-timepicker-meridian').val(this.meridian);
         }
+		this.isValidTime();
+		
       } else {
         this.$widget.find('span.bootstrap-timepicker-hour').text(hour);
         this.$widget.find('span.bootstrap-timepicker-minute').text(minute);
@@ -841,10 +853,44 @@
           }
         break;
       }
-    }
+    },
+	isValidTime: function() {
+		var hourTmp = (this.hour < 12 && this.meridian === 'PM' ? (this.hour + 12): this.hour);
+		hourTmp = (this.hour === 12 && this.meridian === 'AM' ? 0: hourTmp); // Stupid AM/PM system
+		var minHourTmp = (this.minValue.format === 'PM' ? (this.minValue.hour + 12): this.minValue.hour);
+		var maxHourTmp = (this.maxValue.format === 'PM' ? (this.maxValue.hour + 12): this.maxValue.hour);
+		
+		var outRange = false;
+		
+		if (hourTmp > maxHourTmp) {
+			outRange = true;
+		}
+		else if (hourTmp == maxHourTmp && this.minute > this.maxValue.minute) {
+			outRange = true;
+		}
+		else if (hourTmp == maxHourTmp && this.minute == this.maxValue.minute && this.second > this.maxValue.second) {
+			outRange = true;
+		}
+		if (hourTmp < minHourTmp) {
+			outRange = true;
+		}
+		else if (hourTmp == minHourTmp && this.minute < this.minValue.minute) {
+			outRange = true;
+		}
+		else if (hourTmp == minHourTmp && this.minute == this.minValue.minute && this.second < this.minValue.second) {
+			outRange = true;
+		}
+		if (outRange) {
+			$('#timePickerMessageTr').show();
+		}
+		else {
+			$('#timePickerMessageTr').hide();
+		}
+		return outRange;
+	}
   };
 
-
+  
   //TIMEPICKER PLUGIN DEFINITION
   $.fn.timepicker = function(option) {
     var args = Array.apply(null, arguments);
@@ -875,7 +921,9 @@
     showInputs: true,
     showMeridian: true,
     template: 'dropdown',
-    appendWidgetTo: '.bootstrap-timepicker'
+    appendWidgetTo: '.bootstrap-timepicker',
+	minValue: { hour: 0, minute: 0, second: 0, format: '24h'},
+	maxValue: { hour: 23, minute: 59, second: 59, format: '24h'}
   };
 
   $.fn.timepicker.Constructor = Timepicker;
